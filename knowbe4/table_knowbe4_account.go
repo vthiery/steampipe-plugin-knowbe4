@@ -62,7 +62,7 @@ func listAccount(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData
 	}
 
 	var account Account
-	if err := client.get(ctx, "/v1/account", nil, &account); err != nil {
+	if _, err := client.get(ctx, "/v1/account", nil, &account); err != nil {
 		return nil, fmt.Errorf("getting account: %w", err)
 	}
 

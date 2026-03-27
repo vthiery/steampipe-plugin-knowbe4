@@ -55,14 +55,14 @@ func listTrainingPolicies(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		return nil, err
 	}
 
-	for page := 1; ; page++ {
-		params := map[string]string{
-			"page":     fmt.Sprintf("%d", page),
-			"per_page": "500",
-		}
-
+	params := map[string]string{
+		"cursor":   "true",
+		"per_page": "500",
+	}
+	for {
 		var policies []TrainingPolicy
-		if err := client.get(ctx, "/v1/training/policies", params, &policies); err != nil {
+		nextCursor, err := client.get(ctx, "/v1/training/policies", params, &policies)
+		if err != nil {
 			return nil, fmt.Errorf("listing training policies: %w", err)
 		}
 
@@ -73,9 +73,10 @@ func listTrainingPolicies(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 			}
 		}
 
-		if len(policies) == 0 {
+		if nextCursor == "" || len(policies) == 0 {
 			break
 		}
+		params["cursor"] = nextCursor
 	}
 	return nil, nil
 }
@@ -92,7 +93,7 @@ func getTrainingPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	}
 
 	var policy TrainingPolicy
-	if err := client.get(ctx, fmt.Sprintf("/v1/training/policies/%d", id), nil, &policy); err != nil {
+	if _, err := client.get(ctx, fmt.Sprintf("/v1/training/policies/%d", id), nil, &policy); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}

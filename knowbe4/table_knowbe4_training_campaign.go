@@ -68,14 +68,14 @@ func listTrainingCampaigns(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 		return nil, err
 	}
 
-	for page := 1; ; page++ {
-		params := map[string]string{
-			"page":     fmt.Sprintf("%d", page),
-			"per_page": "500",
-		}
-
+	params := map[string]string{
+		"cursor":   "true",
+		"per_page": "500",
+	}
+	for {
 		var campaigns []TrainingCampaign
-		if err := client.get(ctx, "/v1/training/campaigns", params, &campaigns); err != nil {
+		nextCursor, err := client.get(ctx, "/v1/training/campaigns", params, &campaigns)
+		if err != nil {
 			return nil, fmt.Errorf("listing training campaigns: %w", err)
 		}
 
@@ -86,9 +86,10 @@ func listTrainingCampaigns(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 			}
 		}
 
-		if len(campaigns) == 0 {
+		if nextCursor == "" || len(campaigns) == 0 {
 			break
 		}
+		params["cursor"] = nextCursor
 	}
 	return nil, nil
 }
@@ -105,7 +106,7 @@ func getTrainingCampaign(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	}
 
 	var campaign TrainingCampaign
-	if err := client.get(ctx, fmt.Sprintf("/v1/training/campaigns/%d", id), nil, &campaign); err != nil {
+	if _, err := client.get(ctx, fmt.Sprintf("/v1/training/campaigns/%d", id), nil, &campaign); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}

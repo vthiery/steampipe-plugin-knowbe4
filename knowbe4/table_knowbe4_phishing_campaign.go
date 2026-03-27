@@ -72,13 +72,14 @@ func listPhishingCampaigns(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 		return nil, err
 	}
 
-	params := map[string]string{}
-	for page := 1; ; page++ {
-		params["page"] = fmt.Sprintf("%d", page)
-		params["per_page"] = "500"
-
+	params := map[string]string{
+		"cursor":   "true",
+		"per_page": "500",
+	}
+	for {
 		var campaigns []PhishingCampaign
-		if err := client.get(ctx, "/v1/phishing/campaigns", params, &campaigns); err != nil {
+		nextCursor, err := client.get(ctx, "/v1/phishing/campaigns", params, &campaigns)
+		if err != nil {
 			return nil, fmt.Errorf("listing phishing campaigns: %w", err)
 		}
 
@@ -89,9 +90,10 @@ func listPhishingCampaigns(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 			}
 		}
 
-		if len(campaigns) == 0 {
+		if nextCursor == "" || len(campaigns) == 0 {
 			break
 		}
+		params["cursor"] = nextCursor
 	}
 	return nil, nil
 }
@@ -108,7 +110,7 @@ func getPhishingCampaign(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	}
 
 	var campaign PhishingCampaign
-	if err := client.get(ctx, fmt.Sprintf("/v1/phishing/campaigns/%d", id), nil, &campaign); err != nil {
+	if _, err := client.get(ctx, fmt.Sprintf("/v1/phishing/campaigns/%d", id), nil, &campaign); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}

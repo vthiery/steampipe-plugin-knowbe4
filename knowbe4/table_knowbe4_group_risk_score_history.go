@@ -51,7 +51,7 @@ func listGroupRiskScoreHistory(ctx context.Context, d *plugin.QueryData, _ *plug
 	}
 
 	var entries []RiskScoreEntry
-	if err := client.get(ctx, fmt.Sprintf("/v1/groups/%d/risk_score_history", groupID), map[string]string{"full": "true"}, &entries); err != nil {
+	if _, err := client.get(ctx, fmt.Sprintf("/v1/groups/%d/risk_score_history", groupID), map[string]string{"full": "true"}, &entries); err != nil {
 		return nil, fmt.Errorf("getting group %d risk score history: %w", groupID, err)
 	}
 

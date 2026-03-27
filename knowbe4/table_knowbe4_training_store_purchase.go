@@ -67,14 +67,14 @@ func listTrainingStorePurchases(ctx context.Context, d *plugin.QueryData, _ *plu
 		return nil, err
 	}
 
-	for page := 1; ; page++ {
-		params := map[string]string{
-			"page":     fmt.Sprintf("%d", page),
-			"per_page": "500",
-		}
-
+	params := map[string]string{
+		"cursor":   "true",
+		"per_page": "500",
+	}
+	for {
 		var purchases []TrainingStorePurchase
-		if err := client.get(ctx, "/v1/training/store_purchases", params, &purchases); err != nil {
+		nextCursor, err := client.get(ctx, "/v1/training/store_purchases", params, &purchases)
+		if err != nil {
 			return nil, fmt.Errorf("listing training store purchases: %w", err)
 		}
 
@@ -85,9 +85,10 @@ func listTrainingStorePurchases(ctx context.Context, d *plugin.QueryData, _ *plu
 			}
 		}
 
-		if len(purchases) == 0 {
+		if nextCursor == "" || len(purchases) == 0 {
 			break
 		}
+		params["cursor"] = nextCursor
 	}
 	return nil, nil
 }
@@ -104,7 +105,7 @@ func getTrainingStorePurchase(ctx context.Context, d *plugin.QueryData, _ *plugi
 	}
 
 	var purchase TrainingStorePurchase
-	if err := client.get(ctx, fmt.Sprintf("/v1/training/store_purchases/%d", id), nil, &purchase); err != nil {
+	if _, err := client.get(ctx, fmt.Sprintf("/v1/training/store_purchases/%d", id), nil, &purchase); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}

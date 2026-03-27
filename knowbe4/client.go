@@ -62,11 +62,13 @@ func getClient(ctx context.Context, d *plugin.QueryData) (*Client, error) {
 	return newClient(*cfg.APIKey, region), nil
 }
 
-// get performs an authenticated GET request and unmarshals the response body into result.
-func (c *Client) get(ctx context.Context, path string, params map[string]string, result interface{}) error {
+// get performs an authenticated GET request, unmarshals the response body into result,
+// and returns the next cursor value from the X-Next-Cursor response header. An empty string
+// means there are no further pages.
+func (c *Client) get(ctx context.Context, path string, params map[string]string, result interface{}) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+path, nil)
 	if err != nil {
-		return fmt.Errorf("creating request: %w", err)
+		return "", fmt.Errorf("creating request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Accept", "application/json")
@@ -81,28 +83,28 @@ func (c *Client) get(ctx context.Context, path string, params map[string]string,
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("executing request: %w", err)
+		return "", fmt.Errorf("executing request: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("reading response body: %w", err)
+		return "", fmt.Errorf("reading response body: %w", err)
 	}
 
 	switch resp.StatusCode {
 	case http.StatusOK:
 		// fallthrough to unmarshal
 	case http.StatusNotFound:
-		return ErrNotFound
+		return "", ErrNotFound
 	case http.StatusTooManyRequests:
-		return ErrRateLimited
+		return "", ErrRateLimited
 	default:
-		return fmt.Errorf("KnowBe4 API error: status=%d body=%s", resp.StatusCode, string(body))
+		return "", fmt.Errorf("KnowBe4 API error: status=%d body=%s", resp.StatusCode, string(body))
 	}
 
 	if err := json.Unmarshal(body, result); err != nil {
-		return fmt.Errorf("unmarshalling response: %w", err)
+		return "", fmt.Errorf("unmarshalling response: %w", err)
 	}
-	return nil
+	return resp.Header.Get("X-Next-Cursor"), nil
 }

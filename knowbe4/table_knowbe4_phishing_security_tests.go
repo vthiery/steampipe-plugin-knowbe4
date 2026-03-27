@@ -98,14 +98,14 @@ func listPhishingSecurityTests(ctx context.Context, d *plugin.QueryData, _ *plug
 		}
 	}
 
-	for page := 1; ; page++ {
-		params := map[string]string{
-			"page":     fmt.Sprintf("%d", page),
-			"per_page": "500",
-		}
-
+	params := map[string]string{
+		"cursor":   "true",
+		"per_page": "500",
+	}
+	for {
 		var psts []PhishingSecurityTest
-		if err := client.get(ctx, path, params, &psts); err != nil {
+		nextCursor, err := client.get(ctx, path, params, &psts)
+		if err != nil {
 			return nil, fmt.Errorf("listing phishing security tests: %w", err)
 		}
 
@@ -116,9 +116,10 @@ func listPhishingSecurityTests(ctx context.Context, d *plugin.QueryData, _ *plug
 			}
 		}
 
-		if len(psts) == 0 {
+		if nextCursor == "" || len(psts) == 0 {
 			break
 		}
+		params["cursor"] = nextCursor
 	}
 	return nil, nil
 }
@@ -135,7 +136,7 @@ func getPhishingSecurityTest(ctx context.Context, d *plugin.QueryData, _ *plugin
 	}
 
 	var pst PhishingSecurityTest
-	if err := client.get(ctx, fmt.Sprintf("/v1/phishing/security_tests/%d", id), nil, &pst); err != nil {
+	if _, err := client.get(ctx, fmt.Sprintf("/v1/phishing/security_tests/%d", id), nil, &pst); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}

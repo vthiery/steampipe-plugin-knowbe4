@@ -106,16 +106,17 @@ func listTrainingEnrollments(ctx context.Context, d *plugin.QueryData, _ *plugin
 		}
 	}
 
-	for page := 1; ; page++ {
-		params := make(map[string]string, len(baseParams)+2)
+	baseParams["cursor"] = "true"
+	baseParams["per_page"] = "500"
+	for {
+		params := make(map[string]string, len(baseParams))
 		for k, v := range baseParams {
 			params[k] = v
 		}
-		params["page"] = fmt.Sprintf("%d", page)
-		params["per_page"] = "500"
 
 		var enrollments []TrainingEnrollment
-		if err := client.get(ctx, "/v1/training/enrollments", params, &enrollments); err != nil {
+		nextCursor, err := client.get(ctx, "/v1/training/enrollments", params, &enrollments)
+		if err != nil {
 			return nil, fmt.Errorf("listing training enrollments: %w", err)
 		}
 
@@ -126,9 +127,10 @@ func listTrainingEnrollments(ctx context.Context, d *plugin.QueryData, _ *plugin
 			}
 		}
 
-		if len(enrollments) == 0 {
+		if nextCursor == "" || len(enrollments) == 0 {
 			break
 		}
+		baseParams["cursor"] = nextCursor
 	}
 	return nil, nil
 }
@@ -145,7 +147,7 @@ func getTrainingEnrollment(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 	}
 
 	var enrollment TrainingEnrollment
-	if err := client.get(ctx, fmt.Sprintf("/v1/training/enrollments/%d", id), nil, &enrollment); err != nil {
+	if _, err := client.get(ctx, fmt.Sprintf("/v1/training/enrollments/%d", id), nil, &enrollment); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}

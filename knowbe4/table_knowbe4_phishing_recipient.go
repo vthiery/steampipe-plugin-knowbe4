@@ -92,14 +92,14 @@ func listPhishingRecipients(ctx context.Context, d *plugin.QueryData, _ *plugin.
 		return nil, err
 	}
 
-	for page := 1; ; page++ {
-		params := map[string]string{
-			"page":     fmt.Sprintf("%d", page),
-			"per_page": "500",
-		}
-
+	params := map[string]string{
+		"cursor":   "true",
+		"per_page": "500",
+	}
+	for {
 		var recipients []PhishingRecipient
-		if err := client.get(ctx, fmt.Sprintf("/v1/phishing/security_tests/%d/recipients", pstID), params, &recipients); err != nil {
+		nextCursor, err := client.get(ctx, fmt.Sprintf("/v1/phishing/security_tests/%d/recipients", pstID), params, &recipients)
+		if err != nil {
 			return nil, fmt.Errorf("listing phishing recipients for PST %d: %w", pstID, err)
 		}
 
@@ -110,9 +110,10 @@ func listPhishingRecipients(ctx context.Context, d *plugin.QueryData, _ *plugin.
 			}
 		}
 
-		if len(recipients) == 0 {
+		if nextCursor == "" || len(recipients) == 0 {
 			break
 		}
+		params["cursor"] = nextCursor
 	}
 	return nil, nil
 }
@@ -130,7 +131,7 @@ func getPhishingRecipient(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 	}
 
 	var recipient PhishingRecipient
-	if err := client.get(ctx, fmt.Sprintf("/v1/phishing/security_tests/%d/recipients/%d", pstID, recipientID), nil, &recipient); err != nil {
+	if _, err := client.get(ctx, fmt.Sprintf("/v1/phishing/security_tests/%d/recipients/%d", pstID, recipientID), nil, &recipient); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}

@@ -41,7 +41,7 @@ func listAccountRiskScoreHistory(ctx context.Context, d *plugin.QueryData, _ *pl
 	}
 
 	var entries []RiskScoreEntry
-	if err := client.get(ctx, "/v1/account/risk_score_history", map[string]string{"full": "true"}, &entries); err != nil {
+	if _, err := client.get(ctx, "/v1/account/risk_score_history", map[string]string{"full": "true"}, &entries); err != nil {
 		return nil, fmt.Errorf("getting account risk score history: %w", err)
 	}
 
