@@ -72,8 +72,7 @@ func listTrainingStorePurchases(ctx context.Context, d *plugin.QueryData, _ *plu
 		"per_page": "500",
 	}
 	for {
-		var purchases []TrainingStorePurchase
-		nextCursor, err := client.get(ctx, "/v1/training/store_purchases", params, &purchases)
+		purchases, nextCursor, err := listPaged[TrainingStorePurchase](ctx, client, "/v1/training/store_purchases", params)
 		if err != nil {
 			return nil, fmt.Errorf("listing training store purchases: %w", err)
 		}
@@ -105,7 +104,7 @@ func getTrainingStorePurchase(ctx context.Context, d *plugin.QueryData, _ *plugi
 	}
 
 	var purchase TrainingStorePurchase
-	if _, err := client.get(ctx, fmt.Sprintf("/v1/training/store_purchases/%d", id), nil, &purchase); err != nil {
+	if err := client.get(ctx, fmt.Sprintf("/v1/training/store_purchases/%d", id), nil, &purchase); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}

@@ -77,8 +77,7 @@ func listPhishingCampaigns(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 		"per_page": "500",
 	}
 	for {
-		var campaigns []PhishingCampaign
-		nextCursor, err := client.get(ctx, "/v1/phishing/campaigns", params, &campaigns)
+		campaigns, nextCursor, err := listPaged[PhishingCampaign](ctx, client, "/v1/phishing/campaigns", params)
 		if err != nil {
 			return nil, fmt.Errorf("listing phishing campaigns: %w", err)
 		}
@@ -110,7 +109,7 @@ func getPhishingCampaign(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	}
 
 	var campaign PhishingCampaign
-	if _, err := client.get(ctx, fmt.Sprintf("/v1/phishing/campaigns/%d", id), nil, &campaign); err != nil {
+	if err := client.get(ctx, fmt.Sprintf("/v1/phishing/campaigns/%d", id), nil, &campaign); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}

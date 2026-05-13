@@ -62,13 +62,11 @@ func getClient(ctx context.Context, d *plugin.QueryData) (*Client, error) {
 	return newClient(*cfg.APIKey, region), nil
 }
 
-// get performs an authenticated GET request, unmarshals the response body into result,
-// and returns the next cursor value from the X-Next-Cursor response header. An empty string
-// means there are no further pages.
-func (c *Client) get(ctx context.Context, path string, params map[string]string, result interface{}) (string, error) {
+// get performs an authenticated GET request and unmarshals the response body into result.
+func (c *Client) get(ctx context.Context, path string, params map[string]string, result interface{}) error {
 	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+path, nil)
 	if err != nil {
-		return "", fmt.Errorf("creating request: %w", err)
+		return fmt.Errorf("creating request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Accept", "application/json")
@@ -83,28 +81,47 @@ func (c *Client) get(ctx context.Context, path string, params map[string]string,
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("executing request: %w", err)
+		return fmt.Errorf("executing request: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("reading response body: %w", err)
+		return fmt.Errorf("reading response body: %w", err)
 	}
 
 	switch resp.StatusCode {
 	case http.StatusOK:
 		// fallthrough to unmarshal
 	case http.StatusNotFound:
-		return "", ErrNotFound
+		return ErrNotFound
 	case http.StatusTooManyRequests:
-		return "", ErrRateLimited
+		return ErrRateLimited
 	default:
-		return "", fmt.Errorf("KnowBe4 API error: status=%d body=%s", resp.StatusCode, string(body))
+		return fmt.Errorf("KnowBe4 API error: status=%d body=%s", resp.StatusCode, string(body))
 	}
 
 	if err := json.Unmarshal(body, result); err != nil {
-		return "", fmt.Errorf("unmarshalling response: %w", err)
+		return fmt.Errorf("unmarshalling response: %w", err)
 	}
-	return resp.Header.Get("X-Next-Cursor"), nil
+	return nil
+}
+
+// cursorResponse is the envelope KnowBe4 returns when cursor pagination is enabled
+// (i.e. when the request includes `cursor=true`).
+type cursorResponse[T any] struct {
+	Data     []T `json:"data"`
+	Metadata struct {
+		NextCursor string `json:"next_cursor"`
+	} `json:"_metadata"`
+}
+
+// listPaged performs a cursor-paginated GET, returning the page items and the next
+// cursor token. An empty next cursor signals there are no further pages.
+func listPaged[T any](ctx context.Context, c *Client, path string, params map[string]string) ([]T, string, error) {
+	var resp cursorResponse[T]
+	if err := c.get(ctx, path, params, &resp); err != nil {
+		return nil, "", err
+	}
+	return resp.Data, resp.Metadata.NextCursor, nil
 }

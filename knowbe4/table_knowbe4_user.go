@@ -124,8 +124,7 @@ func listUsers(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) 
 	params["cursor"] = "true"
 	params["per_page"] = "500"
 	for {
-		var pageUsers []User
-		nextCursor, err := client.get(ctx, path, params, &pageUsers)
+		pageUsers, nextCursor, err := listPaged[User](ctx, client, path, params)
 		if err != nil {
 			return nil, fmt.Errorf("listing users: %w", err)
 		}
@@ -157,7 +156,7 @@ func getUser(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (i
 	}
 
 	var user User
-	if _, err := client.get(ctx, fmt.Sprintf("/v1/users/%d", id), nil, &user); err != nil {
+	if err := client.get(ctx, fmt.Sprintf("/v1/users/%d", id), nil, &user); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}

@@ -103,8 +103,7 @@ func listPhishingSecurityTests(ctx context.Context, d *plugin.QueryData, _ *plug
 		"per_page": "500",
 	}
 	for {
-		var psts []PhishingSecurityTest
-		nextCursor, err := client.get(ctx, path, params, &psts)
+		psts, nextCursor, err := listPaged[PhishingSecurityTest](ctx, client, path, params)
 		if err != nil {
 			return nil, fmt.Errorf("listing phishing security tests: %w", err)
 		}
@@ -136,7 +135,7 @@ func getPhishingSecurityTest(ctx context.Context, d *plugin.QueryData, _ *plugin
 	}
 
 	var pst PhishingSecurityTest
-	if _, err := client.get(ctx, fmt.Sprintf("/v1/phishing/security_tests/%d", id), nil, &pst); err != nil {
+	if err := client.get(ctx, fmt.Sprintf("/v1/phishing/security_tests/%d", id), nil, &pst); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}

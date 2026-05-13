@@ -73,8 +73,7 @@ func listTrainingCampaigns(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 		"per_page": "500",
 	}
 	for {
-		var campaigns []TrainingCampaign
-		nextCursor, err := client.get(ctx, "/v1/training/campaigns", params, &campaigns)
+		campaigns, nextCursor, err := listPaged[TrainingCampaign](ctx, client, "/v1/training/campaigns", params)
 		if err != nil {
 			return nil, fmt.Errorf("listing training campaigns: %w", err)
 		}
@@ -106,7 +105,7 @@ func getTrainingCampaign(ctx context.Context, d *plugin.QueryData, _ *plugin.Hyd
 	}
 
 	var campaign TrainingCampaign
-	if _, err := client.get(ctx, fmt.Sprintf("/v1/training/campaigns/%d", id), nil, &campaign); err != nil {
+	if err := client.get(ctx, fmt.Sprintf("/v1/training/campaigns/%d", id), nil, &campaign); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}

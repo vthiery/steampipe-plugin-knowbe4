@@ -60,8 +60,7 @@ func listTrainingPolicies(ctx context.Context, d *plugin.QueryData, _ *plugin.Hy
 		"per_page": "500",
 	}
 	for {
-		var policies []TrainingPolicy
-		nextCursor, err := client.get(ctx, "/v1/training/policies", params, &policies)
+		policies, nextCursor, err := listPaged[TrainingPolicy](ctx, client, "/v1/training/policies", params)
 		if err != nil {
 			return nil, fmt.Errorf("listing training policies: %w", err)
 		}
@@ -93,7 +92,7 @@ func getTrainingPolicy(ctx context.Context, d *plugin.QueryData, _ *plugin.Hydra
 	}
 
 	var policy TrainingPolicy
-	if _, err := client.get(ctx, fmt.Sprintf("/v1/training/policies/%d", id), nil, &policy); err != nil {
+	if err := client.get(ctx, fmt.Sprintf("/v1/training/policies/%d", id), nil, &policy); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}

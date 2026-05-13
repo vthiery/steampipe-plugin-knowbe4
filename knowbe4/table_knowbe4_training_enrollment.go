@@ -114,8 +114,7 @@ func listTrainingEnrollments(ctx context.Context, d *plugin.QueryData, _ *plugin
 			params[k] = v
 		}
 
-		var enrollments []TrainingEnrollment
-		nextCursor, err := client.get(ctx, "/v1/training/enrollments", params, &enrollments)
+		enrollments, nextCursor, err := listPaged[TrainingEnrollment](ctx, client, "/v1/training/enrollments", params)
 		if err != nil {
 			return nil, fmt.Errorf("listing training enrollments: %w", err)
 		}
@@ -147,7 +146,7 @@ func getTrainingEnrollment(ctx context.Context, d *plugin.QueryData, _ *plugin.H
 	}
 
 	var enrollment TrainingEnrollment
-	if _, err := client.get(ctx, fmt.Sprintf("/v1/training/enrollments/%d", id), nil, &enrollment); err != nil {
+	if err := client.get(ctx, fmt.Sprintf("/v1/training/enrollments/%d", id), nil, &enrollment); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}

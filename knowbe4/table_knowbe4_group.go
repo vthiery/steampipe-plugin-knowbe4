@@ -68,8 +68,7 @@ func listGroups(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData)
 	params["cursor"] = "true"
 	params["per_page"] = "500"
 	for {
-		var groups []Group
-		nextCursor, err := client.get(ctx, "/v1/groups", params, &groups)
+		groups, nextCursor, err := listPaged[Group](ctx, client, "/v1/groups", params)
 		if err != nil {
 			return nil, fmt.Errorf("listing groups: %w", err)
 		}
@@ -101,7 +100,7 @@ func getGroup(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (
 	}
 
 	var group Group
-	if _, err := client.get(ctx, fmt.Sprintf("/v1/groups/%d", id), nil, &group); err != nil {
+	if err := client.get(ctx, fmt.Sprintf("/v1/groups/%d", id), nil, &group); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			return nil, nil
 		}
