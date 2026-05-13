@@ -1,3 +1,9 @@
+## v0.0.2 [2026-05-13]
+
+_Bug fixes_
+
+- Fix all list tables failing with `json: cannot unmarshal object into Go value of type []knowbe4.T` after KnowBe4 changed cursor-paginated responses to a `{data, _metadata.next_cursor}` envelope ([#11](https://github.com/vthiery/steampipe-plugin-knowbe4/issues/11)).
+
 ## v0.0.1 [2026-03-13]
 
 _What's new?_
