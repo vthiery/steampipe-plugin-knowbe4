@@ -1,3 +1,9 @@
+## v0.0.3 [2026-05-20]
+
+_Bug fixes_
+
+- Honor KnowBe4 Reporting API rate limits (4 req/s, 50 req/min burst) by pacing all requests through a shared rate limiter and retrying `429` responses with `Retry-After` support and exponential backoff. Previously, running multiple controls or joins together would fail as soon as the API returned `429`.
+
 ## v0.0.2 [2026-05-13]
 
 _Bug fixes_
