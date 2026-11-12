@@ -1,3 +1,9 @@
+## v0.0.4 [unreleased]
+
+_Bug fixes_
+
+- Fix every list table stopping after its first page (500 rows). KnowBe4 now returns the next cursor as `pagination.nextCursor`, but the plugin only read `_metadata.next_cursor`, so it never requested page two. Both fields are now read, with `pagination.nextCursor` taking precedence.
+
 ## v0.0.3 [2026-05-20]
 
 _Bug fixes_

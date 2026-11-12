@@ -189,11 +189,27 @@ func parseRetryAfter(h string) time.Duration {
 
 // cursorResponse is the envelope KnowBe4 returns when cursor pagination is enabled
 // (i.e. when the request includes `cursor=true`).
+//
+// The API currently returns the next cursor as `pagination.nextCursor`. An
+// earlier form of the envelope used `_metadata.next_cursor`; it is still read
+// as a fallback. Reading only the older field silently stopped every list
+// after its first page, capping results at `per_page` (500).
 type cursorResponse[T any] struct {
-	Data     []T `json:"data"`
+	Data       []T `json:"data"`
+	Pagination struct {
+		NextCursor string `json:"nextCursor"`
+	} `json:"pagination"`
 	Metadata struct {
 		NextCursor string `json:"next_cursor"`
 	} `json:"_metadata"`
+}
+
+// nextCursor returns the cursor for the next page, or "" on the last page.
+func (r cursorResponse[T]) nextCursor() string {
+	if r.Pagination.NextCursor != "" {
+		return r.Pagination.NextCursor
+	}
+	return r.Metadata.NextCursor
 }
 
 // listPaged performs a cursor-paginated GET, returning the page items and the next
@@ -203,5 +219,5 @@ func listPaged[T any](ctx context.Context, c *Client, path string, params map[st
 	if err := c.get(ctx, path, params, &resp); err != nil {
 		return nil, "", err
 	}
-	return resp.Data, resp.Metadata.NextCursor, nil
+	return resp.Data, resp.nextCursor(), nil
 }
