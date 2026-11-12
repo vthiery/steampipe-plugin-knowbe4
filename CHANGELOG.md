@@ -1,4 +1,4 @@
-## v0.0.4 [unreleased]
+## v0.0.4 [2026-11-12]
 
 _Bug fixes_
 
